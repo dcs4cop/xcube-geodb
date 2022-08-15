@@ -108,4 +108,5 @@ ENV/
 # mypy
 .mypy_cache/
 
-local_notebooks
+notebooks/credentials.py
+
