@@ -1,5 +1,11 @@
-name: Unittest xcube-geodb
+name: xcube-geodb
 
+# Purpose:
+# - run unit-level tests
+# - run JN smoke tests
+# - build Jupyter Notebook + PostGIS docker images
+# - update version in Helm Charts config
+# - redeploy geodb.sql
 
 on:
   workflow_dispatch:
@@ -235,3 +241,36 @@ jobs:
           user-email: bcdev@brockmann-consult.de
           target-branch: main
           commit-message: ${{ github.event.release }}. Set version to ${{ steps.release.outputs.tag }}
+  redeploy-geodb-sql:
+    runs-on: ubuntu-latest
+    needs: [nb-test, unittest]
+    name: redeploy-geodb-sql
+    env:
+      PGPASSWORD: ${{ secrets.GEODB_RDS_PW_SECRET }}
+    steps:
+      - name: git-checkout
+        uses: actions/checkout@v2
+      - name: get-release-tag
+        id: release
+        run: |
+          echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+      # Caution, the branch name is taken: if GITHUB_REF is refs/heads/automate_sql_deployment, tag is automate_sql_deployment
+      # if branch name contains main or master, steps.deployment-phase.outputs.phase == 'dev'
+      - name: deployment-phase
+        id: deployment-phase
+        uses: bc-org/gha-determine-phase@v0.1
+        with:
+          event_name: ${{ github.event_name }}
+          tag: ${{ steps.release.outputs.tag }}
+      - name: info
+        id: info
+        run: |
+          echo "TAG: ${{ steps.release.outputs.tag }}"
+          echo "DEPLOYMENT_PHASE: ${{ steps.deployment-phase.outputs.phase }}"
+          echo "EVENT: ${{ github.event_name }}"
+      - name: run-script-dev
+        if: ${{ steps.deployment-phase.outputs.phase == 'dev' }}
+        run: psql -U postgres -h ${{ secrets.GEODB_RDS_URL }} -d geodb-dev -f xcube_geodb/sql/geodb.sql
+      - name: run-script-stage
+        if: ${{ steps.deployment-phase.outputs.phase == 'stage' }}
+        run: psql -U postgres -h ${{ secrets.GEODB_RDS_URL }} -d geodb-stage -f xcube_geodb/sql/geodb.sql
