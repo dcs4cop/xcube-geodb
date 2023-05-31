@@ -1,0 +1,12 @@
+name: xcube_places_plugin
+channels:
+  - conda-forge
+
+dependencies:
+  # Python
+  - python >=3.6
+  # Required
+  - xcube
+  - xcube_geodb
+  - requests
+  - python-fastjsonschema
