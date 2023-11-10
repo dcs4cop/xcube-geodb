@@ -8,6 +8,8 @@
 
 ### Fixes
 
+- capabilities are now cached correctly
+
 ## v1.0.6
 
 ### New Features
